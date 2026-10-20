@@ -121,6 +121,7 @@ func runServe(args []string) {
 			HTTPPort:  *httpPortFlag,
 			SOCKSPort: *socksPortFlag,
 			PACURL:    fmt.Sprintf("http://%s:%d/proxy.pac", announcedHost, *httpPortFlag),
+			PortalURL: fmt.Sprintf("http://%s:%d/connect", announcedHost, *httpPortFlag),
 			SetupCmd:  fmt.Sprintf("curl -fsSL http://%s:%d/setup.sh | bash", announcedHost, *httpPortFlag),
 		}
 		ui.RenderDashboard(os.Stdout, info)

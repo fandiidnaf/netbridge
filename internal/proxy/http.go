@@ -94,6 +94,12 @@ func (s *HTTPServer) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 	case "/status":
 		s.handleStatusJSON(w, r)
 		return
+	case "/connect", "/":
+		s.handleConnectPortal(w, r)
+		return
+	case "/api/ping":
+		s.handlePingJSON(w, r)
+		return
 	}
 
 	s.metrics.RecordConnection(clientIP)
@@ -310,6 +316,207 @@ func (s *HTTPServer) handleStatusJSON(w http.ResponseWriter, _ *http.Request) {
 
 	w.Header().Set("Content-Type", "application/json")
 	_ = json.NewEncoder(w).Encode(status)
+}
+
+func (s *HTTPServer) handlePingJSON(w http.ResponseWriter, _ *http.Request) {
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(http.StatusOK)
+	_, _ = w.Write([]byte(`{"status":"ok","message":"Connected to NetBridge Gateway"}`))
+}
+
+func (s *HTTPServer) handleConnectPortal(w http.ResponseWriter, r *http.Request) {
+	host := s.determineHost(r)
+	html := fmt.Sprintf(`<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>NetBridge Setup Portal</title>
+<style>
+:root {
+  --bg: #0f172a;
+  --card: #1e293b;
+  --card-border: #334155;
+  --text: #f8fafc;
+  --muted: #94a3b8;
+  --accent: #38bdf8;
+  --accent-hover: #0ea5e9;
+  --success: #22c55e;
+}
+* { box-sizing: border-box; margin: 0; padding: 0; }
+body {
+  font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+  background-color: var(--bg);
+  color: var(--text);
+  line-height: 1.5;
+  padding: 20px 16px;
+}
+.container { max-width: 520px; margin: 0 auto; }
+.header { text-align: center; margin-bottom: 24px; }
+.title { font-size: 22px; font-weight: 700; margin-bottom: 4px; }
+.badge { display: inline-block; background: rgba(34, 197, 94, 0.2); color: var(--success); padding: 4px 10px; border-radius: 999px; font-size: 13px; font-weight: 600; margin-top: 6px; }
+.notice { background: rgba(56, 189, 248, 0.1); border: 1px solid rgba(56, 189, 248, 0.3); border-radius: 10px; padding: 14px; margin-bottom: 20px; font-size: 14px; color: #bae6fd; }
+.card { background: var(--card); border: 1px solid var(--card-border); border-radius: 12px; padding: 18px; margin-bottom: 20px; }
+.card-title { font-size: 16px; font-weight: 600; margin-bottom: 12px; }
+.param-row { display: flex; justify-content: space-between; align-items: center; padding: 10px 0; border-bottom: 1px solid var(--card-border); }
+.param-row:last-child { border-bottom: none; }
+.param-label { font-size: 14px; color: var(--muted); }
+.param-value { font-family: ui-monospace, SFMono-Regular, Menlo, monospace; font-size: 15px; font-weight: 600; }
+.btn-copy { background: rgba(56, 189, 248, 0.15); color: var(--accent); border: 1px solid var(--accent); border-radius: 6px; padding: 6px 12px; font-size: 12px; font-weight: 600; cursor: pointer; min-height: 36px; min-width: 60px; }
+.btn-copy:active { background: var(--accent); color: #000; }
+.tabs { display: flex; gap: 8px; margin-bottom: 14px; }
+.tab-btn { flex: 1; padding: 10px; border: 1px solid var(--card-border); background: #1e293b; color: var(--text); border-radius: 8px; font-size: 14px; font-weight: 600; cursor: pointer; text-align: center; }
+.tab-btn.active { background: var(--accent); color: #0f172a; border-color: var(--accent); }
+.guide-step { display: flex; gap: 12px; margin-bottom: 14px; align-items: flex-start; }
+.step-num { background: rgba(255, 255, 255, 0.1); width: 26px; height: 26px; border-radius: 50%%; display: flex; align-items: center; justify-content: center; font-size: 13px; font-weight: 700; flex-shrink: 0; }
+.step-text { font-size: 14px; color: #cbd5e1; }
+.step-text strong { color: #fff; }
+.test-btn { width: 100%%; background: var(--accent); color: #0f172a; border: none; border-radius: 8px; padding: 12px; font-size: 15px; font-weight: 700; cursor: pointer; min-height: 44px; margin-top: 10px; }
+.test-result { margin-top: 10px; font-size: 13px; text-align: center; }
+</style>
+</head>
+<body>
+<div class="container">
+  <div class="header">
+    <h1 class="title">NetBridge Gateway</h1>
+    <div class="badge">Online and Ready</div>
+  </div>
+
+  <div class="notice">
+    <strong>Notice:</strong> Your device must stay connected to the same Wi-Fi network as the Host Mac for traffic forwarding to function.
+  </div>
+
+  <div class="card">
+    <div class="card-title">Proxy Connection Parameters</div>
+    <div class="param-row">
+      <div>
+        <div class="param-label">Server / Host</div>
+        <div class="param-value" id="val-host">%s</div>
+      </div>
+      <button class="btn-copy" onclick="copyText('val-host', this)">Copy</button>
+    </div>
+    <div class="param-row">
+      <div>
+        <div class="param-label">Port</div>
+        <div class="param-value" id="val-port">%d</div>
+      </div>
+      <button class="btn-copy" onclick="copyText('val-port', this)">Copy</button>
+    </div>
+    <div class="param-row">
+      <div>
+        <div class="param-label">SOCKS5 Port</div>
+        <div class="param-value" id="val-socks">%d</div>
+      </div>
+      <button class="btn-copy" onclick="copyText('val-socks', this)">Copy</button>
+    </div>
+  </div>
+
+  <div class="card">
+    <div class="card-title">Step-by-Step Device Setup</div>
+    <div class="tabs">
+      <button class="tab-btn active" onclick="selectTab('ios', this)">iOS (iPhone)</button>
+      <button class="tab-btn" onclick="selectTab('android', this)">Android</button>
+      <button class="tab-btn" onclick="selectTab('windows', this)">Windows</button>
+    </div>
+
+    <div id="guide-ios">
+      <div class="guide-step">
+        <div class="step-num">1</div>
+        <div class="step-text">Open <strong>Settings > Wi-Fi</strong>, and tap the blue <strong>(i)</strong> icon next to your connected network.</div>
+      </div>
+      <div class="guide-step">
+        <div class="step-num">2</div>
+        <div class="step-text">Scroll down to <strong>HTTP PROXY</strong> and select <strong>Configure Proxy > Manual</strong>.</div>
+      </div>
+      <div class="guide-step">
+        <div class="step-num">3</div>
+        <div class="step-text">Paste the Server (<strong>%s</strong>) and Port (<strong>%d</strong>) from above, then tap <strong>Save</strong>.</div>
+      </div>
+    </div>
+
+    <div id="guide-android" style="display:none;">
+      <div class="guide-step">
+        <div class="step-num">1</div>
+        <div class="step-text">Open <strong>Settings > Network & internet > Wi-Fi</strong>, then tap the gear or edit icon on your connected network.</div>
+      </div>
+      <div class="guide-step">
+        <div class="step-num">2</div>
+        <div class="step-text">Expand <strong>Advanced options</strong>, find <strong>Proxy</strong>, and switch it to <strong>Manual</strong>.</div>
+      </div>
+      <div class="guide-step">
+        <div class="step-num">3</div>
+        <div class="step-text">Enter Proxy hostname (<strong>%s</strong>) and Proxy port (<strong>%d</strong>), then tap <strong>Save</strong>.</div>
+      </div>
+    </div>
+
+    <div id="guide-windows" style="display:none;">
+      <div class="guide-step">
+        <div class="step-num">1</div>
+        <div class="step-text">Open <strong>Settings > Network & internet > Proxy</strong>.</div>
+      </div>
+      <div class="guide-step">
+        <div class="step-num">2</div>
+        <div class="step-text">Under <strong>Automatic proxy setup</strong>, turn on <strong>Use setup script</strong>.</div>
+      </div>
+      <div class="guide-step">
+        <div class="step-num">3</div>
+        <div class="step-text">Paste the PAC Script URL: <strong>http://%s:%d/proxy.pac</strong>, then click <strong>Save</strong>.</div>
+      </div>
+    </div>
+
+    <button class="test-btn" onclick="testConnection()">Verify Connection Status</button>
+    <div id="test-result" class="test-result"></div>
+  </div>
+</div>
+
+<script>
+function copyText(elementId, btn) {
+  const text = document.getElementById(elementId).innerText.trim();
+  navigator.clipboard.writeText(text).then(() => {
+    const original = btn.innerText;
+    btn.innerText = "Copied!";
+    setTimeout(() => { btn.innerText = original; }, 1500);
+  });
+}
+
+function selectTab(tab, btn) {
+  document.querySelectorAll('.tab-btn').forEach(b => b.classList.remove('active'));
+  btn.classList.add('active');
+  document.getElementById('guide-ios').style.display = tab === 'ios' ? 'block' : 'none';
+  document.getElementById('guide-android').style.display = tab === 'android' ? 'block' : 'none';
+  document.getElementById('guide-windows').style.display = tab === 'windows' ? 'block' : 'none';
+}
+
+function testConnection() {
+  const resultDiv = document.getElementById('test-result');
+  resultDiv.innerHTML = '<span style="color:var(--muted)">Checking connectivity...</span>';
+  fetch('/api/ping')
+    .then(res => res.json())
+    .then(data => {
+      if (data.status === 'ok') {
+        resultDiv.innerHTML = '<span style="color:var(--success);font-weight:600;">Success: Your device is communicating with NetBridge Gateway!</span>';
+      }
+    })
+    .catch(err => {
+      resultDiv.innerHTML = '<span style="color:#ef4444;font-weight:600;">Failed: Ensure you are connected to the same Wi-Fi network.</span>';
+    });
+}
+
+// Auto-select tab by user agent
+(function() {
+  const ua = navigator.userAgent || '';
+  if (/android/i.test(ua)) {
+    const androidTab = document.querySelectorAll('.tab-btn')[1];
+    if (androidTab) selectTab('android', androidTab);
+  }
+})();
+</script>
+</body>
+</html>`, host, s.config.HTTPPort, s.config.SOCKSPort, host, s.config.HTTPPort, host, s.config.HTTPPort, host, s.config.HTTPPort)
+
+	w.Header().Set("Content-Type", "text/html; charset=utf-8")
+	w.WriteHeader(http.StatusOK)
+	_, _ = w.Write([]byte(html))
 }
 
 func (s *HTTPServer) determineHost(r *http.Request) string {

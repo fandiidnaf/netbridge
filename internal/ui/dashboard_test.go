@@ -23,6 +23,7 @@ func TestRenderDashboard(t *testing.T) {
 		HTTPPort:  8888,
 		SOCKSPort: 1080,
 		PACURL:    "http://192.168.1.50:8888/proxy.pac",
+		PortalURL: "http://192.168.1.50:8888/connect",
 		SetupCmd:  "curl -fsSL http://192.168.1.50:8888/setup.sh | bash",
 	}
 
@@ -37,6 +38,9 @@ func TestRenderDashboard(t *testing.T) {
 	}
 	if !strings.Contains(output, "socks5://192.168.1.50:1080") {
 		t.Errorf("expected dashboard to contain socks port")
+	}
+	if !strings.Contains(output, "http://192.168.1.50:8888/connect") {
+		t.Errorf("expected dashboard to contain portal url")
 	}
 }
 

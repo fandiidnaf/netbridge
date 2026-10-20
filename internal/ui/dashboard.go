@@ -15,6 +15,7 @@ type ServerInfo struct {
 	HTTPPort  int
 	SOCKSPort int
 	PACURL    string
+	PortalURL string
 	SetupCmd  string
 }
 
@@ -41,16 +42,22 @@ func RenderDashboard(w io.Writer, info ServerInfo) {
 		fmt.Fprintf(&b, "SOCKS5 Proxy:     socks5://%s:%d\n", info.Host, info.SOCKSPort)
 	}
 	fmt.Fprintf(&b, "PAC Auto-Config:  %s\n", info.PACURL)
+	fmt.Fprintf(&b, "Mobile Portal:    %s\n", info.PortalURL)
 	b.WriteString("----------------------------------------------------------------\n")
 	b.WriteString("Client Quick-Connect:\n")
 	fmt.Fprintf(&b, "  • Mac / Linux:  %s\n", info.SetupCmd)
 	fmt.Fprintf(&b, "  • Disconnect:   curl -fsSL http://%s:%d/restore.sh | bash\n", info.Host, info.HTTPPort)
 	b.WriteString("  • Windows:      Enable 'Use setup script' and paste PAC URL above\n")
-	b.WriteString("  • Smartphone:   Connect to the same Wi-Fi, then scan QR code below\n")
+	fmt.Fprintf(&b, "  • Smartphone:   Scan QR code below or set Wi-Fi proxy manually:\n")
+	fmt.Fprintf(&b, "                  Host: %s | Port: %d\n", info.Host, info.HTTPPort)
 	b.WriteString("----------------------------------------------------------------\n\n")
 
-	// QR code encodes the PAC URL for easy proxy auto-discovery
-	qrCode, err := GenerateTerminalQRCode(info.PACURL)
+	// QR code encodes the Mobile Portal URL for zero-confusion mobile browser onboarding
+	qrTarget := info.PortalURL
+	if qrTarget == "" {
+		qrTarget = info.PACURL
+	}
+	qrCode, err := GenerateTerminalQRCode(qrTarget)
 	if err == nil {
 		b.WriteString(qrCode)
 		b.WriteString("\n")

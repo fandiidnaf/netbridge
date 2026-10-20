@@ -83,6 +83,28 @@ func TestHelperEndpoints(t *testing.T) {
 	if respStatus.StatusCode != http.StatusOK {
 		t.Errorf("expected status 200, got %d", respStatus.StatusCode)
 	}
+
+	// 5. Test /connect (HTML portal)
+	respConnect, err := http.Get(baseURL + "/connect")
+	if err != nil {
+		t.Fatalf("GET /connect failed: %v", err)
+	}
+	defer respConnect.Body.Close()
+	connectBody, _ := io.ReadAll(respConnect.Body)
+	if !strings.Contains(string(connectBody), "NetBridge Gateway") {
+		t.Errorf("expected HTML portal in /connect, got: %s", string(connectBody))
+	}
+
+	// 6. Test /api/ping
+	respPing, err := http.Get(baseURL + "/api/ping")
+	if err != nil {
+		t.Fatalf("GET /api/ping failed: %v", err)
+	}
+	defer respPing.Body.Close()
+	pingBody, _ := io.ReadAll(respPing.Body)
+	if !strings.Contains(string(pingBody), "NetBridge Gateway") {
+		t.Errorf("expected success ping message, got: %s", string(pingBody))
+	}
 }
 
 func TestHTTPForwarding(t *testing.T) {
