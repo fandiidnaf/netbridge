@@ -1,3 +1,5 @@
+# frozen_string_literal: true
+
 # Network sharing gateway formula for NetBridge.
 class Netbridge < Formula
   desc 'User-space network sharing gateway for macOS'
