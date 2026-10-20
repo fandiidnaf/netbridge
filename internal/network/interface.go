@@ -1,3 +1,4 @@
+// Package network provides interface discovery and macOS system proxy management.
 package network
 
 import (

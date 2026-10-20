@@ -1,3 +1,4 @@
+// Package ui provides terminal dashboard rendering and QR code generation.
 package ui
 
 import (
@@ -32,18 +33,18 @@ func RenderDashboard(w io.Writer, info ServerInfo) {
 	var b strings.Builder
 
 	b.WriteString("\n")
-	b.WriteString("NetBridge — User-Space Network Sharing Gateway\n")
+	b.WriteString("NetBridge: User-Space Network Sharing Gateway\n")
 	b.WriteString("================================================================\n")
-	b.WriteString(fmt.Sprintf("Host Address:     %s\n", info.Host))
-	b.WriteString(fmt.Sprintf("HTTP/HTTPS Proxy: http://%s:%d\n", info.Host, info.HTTPPort))
+	fmt.Fprintf(&b, "Host Address:     %s\n", info.Host)
+	fmt.Fprintf(&b, "HTTP/HTTPS Proxy: http://%s:%d\n", info.Host, info.HTTPPort)
 	if info.SOCKSPort > 0 {
-		b.WriteString(fmt.Sprintf("SOCKS5 Proxy:     socks5://%s:%d\n", info.Host, info.SOCKSPort))
+		fmt.Fprintf(&b, "SOCKS5 Proxy:     socks5://%s:%d\n", info.Host, info.SOCKSPort)
 	}
-	b.WriteString(fmt.Sprintf("PAC Auto-Config:  %s\n", info.PACURL))
+	fmt.Fprintf(&b, "PAC Auto-Config:  %s\n", info.PACURL)
 	b.WriteString("----------------------------------------------------------------\n")
 	b.WriteString("Client Quick-Connect:\n")
-	b.WriteString(fmt.Sprintf("  • Mac / Linux:  %s\n", info.SetupCmd))
-	b.WriteString(fmt.Sprintf("  • Disconnect:   curl -fsSL http://%s:%d/restore.sh | bash\n", info.Host, info.HTTPPort))
+	fmt.Fprintf(&b, "  • Mac / Linux:  %s\n", info.SetupCmd)
+	fmt.Fprintf(&b, "  • Disconnect:   curl -fsSL http://%s:%d/restore.sh | bash\n", info.Host, info.HTTPPort)
 	b.WriteString("  • Windows:      Enable 'Use setup script' and paste PAC URL above\n")
 	b.WriteString("  • Smartphone:   Connect to the same Wi-Fi, then scan QR code below\n")
 	b.WriteString("----------------------------------------------------------------\n\n")

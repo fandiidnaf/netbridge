@@ -1,3 +1,4 @@
+// Package proxy implements HTTP, HTTPS CONNECT, and SOCKS5 proxy engines.
 package proxy
 
 import (

@@ -40,7 +40,7 @@ func TestSOCKSServerEcho(t *testing.T) {
 
 	// Wait for listener to bind
 	var socksAddr net.Addr
-	for i := 0; i < 20; i++ {
+	for range 20 {
 		socksAddr = socksServer.Addr()
 		if socksAddr != nil {
 			break

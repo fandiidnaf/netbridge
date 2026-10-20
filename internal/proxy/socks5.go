@@ -1,3 +1,4 @@
+// Package proxy implements HTTP, HTTPS CONNECT, and SOCKS5 proxy engines.
 package proxy
 
 import (
@@ -6,6 +7,7 @@ import (
 	"fmt"
 	"io"
 	"net"
+	"slices"
 	"strconv"
 	"sync"
 	"time"
@@ -145,15 +147,7 @@ func (s *SOCKSServer) handshake(conn net.Conn) error {
 		return err
 	}
 
-	supportsNoAuth := false
-	for _, m := range methods {
-		if m == socksMethodNoAuth {
-			supportsNoAuth = true
-			break
-		}
-	}
-
-	if !supportsNoAuth {
+	if !slices.Contains(methods, socksMethodNoAuth) {
 		_, _ = conn.Write([]byte{socksVersion5, 0xFF})
 		return errors.New("no acceptable authentication methods")
 	}

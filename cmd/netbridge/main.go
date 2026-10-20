@@ -52,7 +52,7 @@ func main() {
 }
 
 func printUsage() {
-	fmt.Println(`NetBridge — User-Space Network Sharing Gateway for macOS
+	fmt.Println(`NetBridge: User-Space Network Sharing Gateway for macOS
 
 Usage:
   netbridge <command> [arguments]
