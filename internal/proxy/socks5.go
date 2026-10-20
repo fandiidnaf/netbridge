@@ -6,6 +6,7 @@ import (
 	"errors"
 	"fmt"
 	"io"
+	"log"
 	"net"
 	"slices"
 	"strconv"
@@ -127,8 +128,13 @@ func (s *SOCKSServer) handleConnection(clientConn net.Conn) {
 		return
 	}
 
+	log.Printf("[SOCKS5] %s -> %s", clientIP, targetAddr)
+	start := time.Now()
+
 	// 4. Bi-directional data transfer
 	s.tunnel(clientConn, targetConn)
+	duration := time.Since(start).Round(time.Millisecond)
+	log.Printf("[SOCKS5_CLOSE] %s <- %s (Duration: %s)", clientIP, targetAddr, duration)
 }
 
 func (s *SOCKSServer) handshake(conn net.Conn) error {

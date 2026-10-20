@@ -23,7 +23,8 @@ Instead of attempting to broadcast a secondary Wi-Fi radio signal from a locked 
 | Host Mac (running NetBridge)       |
 | HTTP/HTTPS Tunnel : Port 8888      |
 | SOCKS5 Proxy      : Port 1080      |
-| Dynamic PAC & Auto-Setup Endpoint  |
+| Dynamic PAC & Mobile Setup Portal  |
+| Caffeinate Sleep Prevention        |
 +------------------------------------+
                  |
         +--------+--------+
@@ -31,7 +32,8 @@ Instead of attempting to broadcast a secondary Wi-Fi radio signal from a locked 
         v                 v
 +---------------+ +------------------+
 | Smartphones   | | Other Laptops    |
-| (Scan QR Code)| | (1-Line Command) |
+| (Mobile Portal| | (1-Line Command) |
+| & QR Code)    | | (or USB-C Bridge)|
 +---------------+ +------------------+
 ```
 
@@ -40,11 +42,33 @@ Instead of attempting to broadcast a secondary Wi-Fi radio signal from a locked 
 ## Key Features
 
 - **100% User Space**: Runs without root permissions for normal operations. SIP remains fully enabled.
-- **Terminal QR Code**: Prints a compact ANSI QR code directly in your terminal for instant smartphone camera scanning.
+- **Sleep Prevention**: Built-in macOS `caffeinate` integration keeps your Mac awake and Wi-Fi powered while the gateway is running.
+- **Interactive Mobile Portal**: Scanning the terminal QR code opens an interactive web portal that automatically detects your client OS (iOS, Android, macOS, Linux, Windows), provides one-tap copy buttons, and verifies active proxy connectivity.
+- **Zero False-Positive Verification**: Features a virtual probe domain (`probe.netbridge`) to verify that client device traffic is genuinely routing through the gateway.
+- **Live Activity Logs**: Real-time terminal logging with client IP, target host, connection duration, transfer speed, and throughput metrics.
 - **One-Line Laptop Connect**: Generates an auto-configuration shell script for client Macs and Linux laptops.
-- **Proxy Auto-Configuration (PAC)**: Provides a dynamic PAC script endpoint for Windows and macOS automatic proxy configuration.
 - **Dual Engine**: High-performance HTTP/HTTPS CONNECT tunneling and standard RFC 1928 SOCKS5 proxy support.
 - **Automatic Cleanup**: Automatically unsets and restores client system proxies upon disconnection.
+
+---
+
+## Primary Use Cases
+
+### 1. Hotel, Airport, or In-Flight Single-Device Paywalls (Captive Portals)
+Many hotels, public venues, and flights restrict Wi-Fi access to a single authenticated device per voucher.
+- **Solution**: Authenticate on your Mac. Run `netbridge serve`. Connect your smartphone or secondary laptop to the same venue Wi-Fi, then route through NetBridge. All your secondary devices gain internet access under the Mac's authenticated session.
+
+### 2. Whole-Device VPN Sharing
+If your Mac is connected to a corporate VPN, Tailscale, WireGuard, or custom proxy that cannot easily be installed on a mobile device or managed secondary laptop:
+- **Solution**: Clients routing through NetBridge automatically inherit the Mac's VPN route without installing VPN profiles on each device.
+
+### 3. Boosting Speed for a Slow Secondary Laptop (Laptop B)
+*Question*: If Laptop B is on the same Wi-Fi network as the Mac, but Laptop B gets terrible speeds (e.g., poor Wi-Fi antenna, bad driver, interference) while the Mac gets high speeds, can NetBridge make Laptop B faster?
+- **Analysis**: If Laptop B communicates with the Mac over its weak Wi-Fi, the weak radio link remains a bottleneck.
+- **High-Speed Solution**: Connect Laptop B directly to the Mac via a **USB-C / Thunderbolt cable**. macOS automatically negotiates a direct connection (up to 40 Gbps, 0 ms latency, 0% packet loss). Run `netbridge serve` on the Mac, and Laptop B will route directly over the cable through the Mac's fast Wi-Fi connection, achieving full speed!
+
+### 4. Local Development & Traffic Inspection
+Quickly test web applications across mobile browsers without complex DNS reconfigurations or self-signed certificate installations.
 
 ---
 
@@ -93,12 +117,14 @@ Host Address:     192.168.1.50
 HTTP/HTTPS Proxy: http://192.168.1.50:8888
 SOCKS5 Proxy:     socks5://192.168.1.50:1080
 PAC Auto-Config:  http://192.168.1.50:8888/proxy.pac
+Mobile Portal:    http://192.168.1.50:8888/connect
 ----------------------------------------------------------------
 Client Quick-Connect:
   • Mac / Linux:  curl -fsSL http://192.168.1.50:8888/setup.sh | bash
   • Disconnect:   curl -fsSL http://192.168.1.50:8888/restore.sh | bash
   • Windows:      Enable 'Use setup script' and paste PAC URL above
-  • Smartphone:   Connect to the same Wi-Fi, then scan QR code below
+  • Smartphone:   Scan QR code below or set Wi-Fi proxy manually:
+                  Host: 192.168.1.50 | Port: 8888
 ----------------------------------------------------------------
 
 [ ANSI QR CODE PRINTED HERE ]
@@ -109,7 +135,17 @@ Proxy gateway is active. Press Ctrl+C to terminate.
 
 ### 2. Connect from Other Devices
 
-#### Option A: Another Mac or Linux Laptop
+#### Option A: Smartphone (iOS / Android)
+
+1. Make sure your smartphone is connected to the same Wi-Fi network as your Mac.
+2. Open your camera and scan the QR code displayed in the terminal.
+3. Your mobile browser opens the **NetBridge Mobile Portal**:
+   - The portal automatically detects whether you are on iOS or Android.
+   - Use the **Copy** buttons to copy Host IP and Port.
+   - Follow the 3-step setup guide for your OS.
+   - Tap **Verify Active Proxy Connection** to confirm traffic is successfully routing through your Mac!
+
+#### Option B: Another Mac or Linux Laptop
 
 Run the one-line setup command in Terminal:
 
@@ -129,31 +165,40 @@ Alternatively, if `netbridge` is installed on the client Mac:
 netbridge join <HOST_IP>
 ```
 
-#### Option B: Windows Laptop
+#### Option C: Windows Laptop
 
 1. Open **Settings** > **Network & internet** > **Proxy**.
 2. Under **Automatic proxy setup**, turn on **Use setup script**.
 3. In **Script address**, paste the PAC URL: `http://<HOST_IP>:8888/proxy.pac`.
 4. Click **Save**.
 
-#### Option C: Smartphone (iOS / Android)
+---
 
-1. Make sure your smartphone is connected to the same Wi-Fi network (or personal hotspot).
-2. Open your camera and scan the QR code displayed in the terminal.
-3. Alternatively, open your Wi-Fi settings, select **Configure Proxy > Manual**, and set:
-   - **Server**: `<HOST_IP>`
-   - **Port**: `8888`
+## Live Activity Logging
+
+While `netbridge serve` is active, real-time connection events and throughput are logged to the terminal:
+
+```text
+22:05:10 [CONNECT] 192.168.1.105 -> api.github.com:443
+22:05:12 [CLOSE]   192.168.1.105 <- api.github.com:443 (Up: 1.4 KiB, Down: 32.1 KiB, Duration: 2.1s)
+22:05:15 [SOCKS5]  192.168.1.105 -> 1.1.1.1:53
+22:05:16 [PROBE]   192.168.1.105 validated active proxy routing
+```
+
+Query live gateway throughput via the JSON status endpoint:
+
+```bash
+curl -s http://127.0.0.1:8888/status | jq
+```
 
 ---
 
-## Handling Hotel & Captive Portal Networks
+## Sleep Prevention
 
-In hotel or public Wi-Fi networks that enable **Client Isolation** (preventing devices from communicating directly over Wi-Fi), you can connect two Macs directly using a USB-C or Thunderbolt cable:
-
-1. Connect the Host Mac and Client Mac with a USB-C cable.
-2. macOS automatically negotiates a high-speed **Thunderbolt Bridge** (up to 40 Gbps).
-3. On the Host Mac, start `netbridge serve`.
-4. The client can now route all traffic through the cable connection directly.
+By default, `netbridge serve` activates macOS `caffeinate` to prevent the host Mac from sleeping while the gateway is active:
+- Prevents system idle sleep (`-i`) and AC sleep (`-s`).
+- Automatically terminates when `netbridge` exits on `Ctrl+C`.
+- Can be disabled if desired using `--prevent-sleep=false`.
 
 ---
 
@@ -171,10 +216,11 @@ Commands:
   version    Show version and build information
 
 Flags for 'serve':
-  --host         Host address to announce (defaults to auto-detected local IP)
-  --http-port    Port for HTTP/HTTPS proxy and setup scripts (default: 8888)
-  --socks-port   Port for SOCKS5 proxy (default: 1080, set 0 to disable)
-  --quiet        Suppress banner and QR code output
+  --host            Host address to announce (defaults to auto-detected local IP)
+  --http-port       Port for HTTP/HTTPS proxy and setup scripts (default: 8888)
+  --socks-port      Port for SOCKS5 proxy (default: 1080, set 0 to disable)
+  --prevent-sleep   Keep macOS awake while gateway is active (default: true)
+  --quiet           Suppress banner and QR code output
 ```
 
 ---

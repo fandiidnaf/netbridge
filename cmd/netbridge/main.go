@@ -6,7 +6,9 @@ import (
 	"fmt"
 	"net/http"
 	"os"
+	"os/exec"
 	"os/signal"
+	"runtime"
 	"strconv"
 	"syscall"
 	"time"
@@ -73,8 +75,19 @@ func runServe(args []string) {
 	httpPortFlag := fs.Int("http-port", 8888, "Port for HTTP/HTTPS proxy and setup scripts")
 	socksPortFlag := fs.Int("socks-port", 1080, "Port for SOCKS5 proxy (0 to disable)")
 	quietFlag := fs.Bool("quiet", false, "Suppress banner and QR code output")
+	preventSleepFlag := fs.Bool("prevent-sleep", true, "Prevent macOS from sleeping while the gateway is active (via caffeinate)")
 
 	_ = fs.Parse(args)
+
+	// Keep Mac awake while serve is running
+	if runtime.GOOS == "darwin" && *preventSleepFlag {
+		caffeinateCmd := exec.Command("caffeinate", "-i", "-s", "-w", strconv.Itoa(os.Getpid()))
+		if err := caffeinateCmd.Start(); err == nil {
+			go func() {
+				_ = caffeinateCmd.Wait()
+			}()
+		}
+	}
 
 	announcedHost := *hostFlag
 	if announcedHost == "" {
