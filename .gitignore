@@ -1,7 +1,7 @@
 # Binaries
 bin/
 dist/
-netbridge
+/netbridge
 
 # Architecture & OS specific files
 .DS_Store
