@@ -1,54 +1,82 @@
 # NetBridge
 
-NetBridge is a lightweight, user-space network sharing gateway designed for macOS. It allows you to share your Mac's active Wi-Fi or VPN connection with other devices (smartphones, other laptops, and tablets) without requiring kernel extensions, without disabling System Integrity Protection (SIP), and without modifying internal system settings.
+NetBridge is a lightweight, user-space network sharing gateway designed for macOS. It allows you to share your Mac's active Wi-Fi, Ethernet, or VPN connection with other devices (smartphones, other laptops, and tablets) without requiring kernel extensions, without disabling System Integrity Protection (SIP), and without modifying internal system settings.
 
 ---
 
 ## Why NetBridge?
 
-On macOS, the built-in *Internet Sharing* feature prevents you from sharing an incoming Wi-Fi connection over Wi-Fi. While Windows and Linux support virtual STA/AP concurrency on select chips, Apple's proprietary Wi-Fi driver architecture (`DriverKit-AppleBCMWLAN`) strictly locks the internal wireless interface from running as an infrastructure Access Point while simultaneously connected to an upstream network.
+On macOS, the native *Internet Sharing* feature prevents you from sharing an incoming Wi-Fi connection over Wi-Fi. While Windows and Linux support virtual STA/AP concurrency on select chips, Apple's proprietary Wi-Fi driver architecture (`DriverKit-AppleBCMWLAN`) strictly locks the internal wireless interface from running as an infrastructure Access Point while simultaneously connected to an upstream network.
 
 Bypassing this via low-level kernel hacks requires disabling SIP and downgrading Apple Silicon security policies, which introduces severe security and stability risks.
 
 **NetBridge solves this problem legally in User Space:**
-Instead of attempting to broadcast a secondary Wi-Fi radio signal from a locked driver, NetBridge turns your Mac into a local gateway. Any client device on the same local network or paired cable can route all its traffic through your Mac's Wi-Fi and VPN connection.
-
-```
-+------------------------------------+
-| Upstream Internet (Wi-Fi / VPN)    |
-+------------------------------------+
-                 |
-                 v
-+------------------------------------+
-| Host Mac (running NetBridge)       |
-| HTTP/HTTPS Tunnel : Port 8888      |
-| SOCKS5 Proxy      : Port 1080      |
-| Dynamic PAC & Mobile Setup Portal  |
-| Caffeinate Sleep Prevention        |
-+------------------------------------+
-                 |
-        +--------+--------+
-        |                 |
-        v                 v
-+---------------+ +------------------+
-| Smartphones   | | Other Laptops    |
-| (Mobile Portal| | (1-Line Command) |
-| & QR Code)    | | (or USB-C Bridge)|
-+---------------+ +------------------+
-```
+Instead of attempting to broadcast a secondary Wi-Fi radio signal from a locked driver, NetBridge turns your Mac into a local gateway. Any client device on the same local network or connected via a direct cable can route all its traffic through your Mac's Wi-Fi and VPN connection.
 
 ---
 
-## Key Features
+## How It Works: Traffic Flow & Router Perspective
 
-- **100% User Space**: Runs without root permissions for normal operations. SIP remains fully enabled.
-- **Sleep Prevention**: Built-in macOS `caffeinate` integration keeps your Mac awake and Wi-Fi powered while the gateway is running.
-- **Interactive Mobile Portal**: Scanning the terminal QR code opens an interactive web portal that automatically detects your client OS (iOS, Android, macOS, Linux, Windows), provides one-tap copy buttons, and verifies active proxy connectivity.
-- **Zero False-Positive Verification**: Features a virtual probe domain (`probe.netbridge`) to verify that client device traffic is genuinely routing through the gateway.
-- **Live Activity Logs**: Real-time terminal logging with client IP, target host, connection duration, transfer speed, and throughput metrics.
-- **One-Line Laptop Connect**: Generates an auto-configuration shell script for client Macs and Linux laptops.
-- **Dual Engine**: High-performance HTTP/HTTPS CONNECT tunneling and standard RFC 1928 SOCKS5 proxy support.
-- **Automatic Cleanup**: Automatically unsets and restores client system proxies upon disconnection.
+A common question is: *If client devices connect to the same Wi-Fi or router, doesn't the router still see them?*
+
+Here is how NetBridge handles traffic across network layers:
+
+```
+[ Client Device (Laptop B / Smartphone) ]
+                  |
+                  | 1. Sends internal LAN tunnel request to Mac (Port 8888)
+                  v
+       +--------------------+
+       |  Local Wi-Fi / LAN |  <-- Router acts ONLY as a local switch.
+       +--------------------+      It does NOT see what websites the client opens.
+                  |
+                  v
+       [ Host Mac (NetBridge) ]
+                  |
+                  | 2. Mac creates an outbound connection in its own name
+                  v
+       +--------------------+
+       |  Router / Gateway  |  <-- Router sees ONLY the Mac accessing the Internet.
+       +--------------------+
+                  |
+                  v
+        [ Upstream Internet ]  <-- Websites see ONLY the Mac's IP address.
+```
+
+### 1. In the Eyes of the Local Router
+- **Normal browsing (without NetBridge)**: The router inspects every packet, monitors domains via DNS, and enforces per-device captive portal logins or bandwidth limits against the client's MAC address.
+- **With NetBridge**: The client sends its packets **only to the Mac's local IP address**. The router functions merely as a Layer-2 switch forwarding packets within the local subnet. It never sees external web requests from the client.
+
+### 2. In the Eyes of Upstream Websites
+- When the Mac receives a tunnel request, it initiates a fresh outbound TCP connection to the destination server (e.g., Google, GitHub, or Netflix).
+- External web servers only see the Mac's IP address (or the Mac's active VPN tunnel exit).
+
+---
+
+## Connection Modes
+
+NetBridge supports two primary connection architectures:
+
+### Mode 1: Wireless LAN Sharing (Default)
+Both your Mac and client devices join the same local Wi-Fi network.
+- **Best for**: Smartphones, tablets, and mobile devices scanning the terminal QR code.
+- **Requirement**: Client devices must be connected to the same Wi-Fi network (or router) to communicate with the Mac's local IP.
+
+### Mode 2: Direct Cable Bridge (Zero-Router / 100% Bypass)
+Connect your Mac directly to a secondary laptop using a **USB-C, Thunderbolt, or Ethernet cable**.
+- **Best for**: 
+  - Overcoming weak, faulty, or congested Wi-Fi on a secondary laptop (Laptop B).
+  - Venues with strict Wi-Fi *Client Isolation* (where devices cannot communicate with each other over Wi-Fi).
+  - Maximizing throughput with link speeds up to 40 Gbps, 0 ms added latency, and 0% packet loss.
+- **How to use**:
+  1. Plug a USB-C / Thunderbolt cable between your Mac and Laptop B.
+  2. Turn off Wi-Fi on Laptop B (optional, ensures all traffic uses the cable).
+  3. Run `netbridge serve` on your Mac.
+  4. On Laptop B, run the setup command using the Mac's Thunderbolt bridge IP (e.g., `169.254.x.x`):
+     ```bash
+     curl -fsSL http://<MAC_BRIDGE_IP>:8888/setup.sh | bash
+     ```
+  5. Laptop B is now 100% disconnected from the router, routing entirely through the Mac's fast Wi-Fi connection.
 
 ---
 
@@ -63,12 +91,25 @@ If your Mac is connected to a corporate VPN, Tailscale, WireGuard, or custom pro
 - **Solution**: Clients routing through NetBridge automatically inherit the Mac's VPN route without installing VPN profiles on each device.
 
 ### 3. Boosting Speed for a Slow Secondary Laptop (Laptop B)
-*Question*: If Laptop B is on the same Wi-Fi network as the Mac, but Laptop B gets terrible speeds (e.g., poor Wi-Fi antenna, bad driver, interference) while the Mac gets high speeds, can NetBridge make Laptop B faster?
-- **Analysis**: If Laptop B communicates with the Mac over its weak Wi-Fi, the weak radio link remains a bottleneck.
-- **High-Speed Solution**: Connect Laptop B directly to the Mac via a **USB-C / Thunderbolt cable**. macOS automatically negotiates a direct connection (up to 40 Gbps, 0 ms latency, 0% packet loss). Run `netbridge serve` on the Mac, and Laptop B will route directly over the cable through the Mac's fast Wi-Fi connection, achieving full speed!
+*Problem*: Laptop B has a weak Wi-Fi chip, bad drivers, or poor antenna placement, resulting in slow speeds and high packet loss, while your Mac gets full speed on the same Wi-Fi.
+- **Over Wi-Fi**: Routing over the same Wi-Fi will not fix the issue because packets still have to traverse Laptop B's weak radio link to reach the Mac.
+- **The Cable Solution**: Connect Laptop B directly to the Mac via a **USB-C or Thunderbolt cable**. Laptop B routes across the wire directly into the Mac, completely bypassing its weak Wi-Fi card and matching your Mac's internet speed.
 
 ### 4. Local Development & Traffic Inspection
 Quickly test web applications across mobile browsers without complex DNS reconfigurations or self-signed certificate installations.
+
+---
+
+## Key Features
+
+- **100% User Space**: Runs without root permissions for normal operations. SIP remains fully enabled.
+- **Sleep Prevention**: Built-in macOS `caffeinate` integration keeps your Mac awake and Wi-Fi powered while the gateway is running.
+- **Interactive Mobile Portal**: Scanning the terminal QR code opens an interactive web portal that automatically detects your client OS (iOS, Android, macOS, Linux, Windows), provides one-tap copy buttons, and verifies active proxy connectivity.
+- **Zero False-Positive Verification**: Features a virtual probe domain (`probe.netbridge`) to verify that client device traffic is genuinely routing through the gateway.
+- **Live Activity Logs**: Real-time terminal logging with client IP, target host, connection duration, transfer speed, and throughput metrics.
+- **One-Line Laptop Connect**: Generates an auto-configuration shell script for client Macs and Linux laptops.
+- **Dual Engine**: High-performance HTTP/HTTPS CONNECT tunneling and standard RFC 1928 SOCKS5 proxy support.
+- **Automatic Cleanup**: Automatically unsets and restores client system proxies upon disconnection.
 
 ---
 
@@ -174,16 +215,31 @@ netbridge join <HOST_IP>
 
 ---
 
-## Live Activity Logging
+## Understanding Terminal Logs & Activity
 
-While `netbridge serve` is active, real-time connection events and throughput are logged to the terminal:
+While `netbridge serve` is running, real-time connection events appear in your terminal. Here is how to interpret them:
 
 ```text
-22:05:10 [CONNECT] 192.168.1.105 -> api.github.com:443
-22:05:12 [CLOSE]   192.168.1.105 <- api.github.com:443 (Up: 1.4 KiB, Down: 32.1 KiB, Duration: 2.1s)
-22:05:15 [SOCKS5]  192.168.1.105 -> 1.1.1.1:53
-22:05:16 [PROBE]   192.168.1.105 validated active proxy routing
+22:30:10 [CONNECT] 192.168.1.105 -> api.github.com:443
+22:30:12 [CLOSE]   192.168.1.105 <- api.github.com:443 (Up: 1.4 KiB, Down: 32.1 KiB, Duration: 2.1s)
+22:30:15 [FAILED]  192.168.1.105 -> analytics.tracker.com:443: dial tcp: i/o timeout
+22:30:16 [PROBE]   192.168.1.105 validated active proxy routing
 ```
+
+### Log Symbols & Tags Reference
+
+| Tag / Symbol | Meaning | Explanation |
+| :--- | :--- | :--- |
+| **`->`** | **Outbound Request** | The client device is requesting a new connection **toward** the destination server. |
+| **`<-`** | **Inbound Closure** | The connection session has ended and returned data **back to** the client device. |
+| **`[CONNECT]`** | **HTTPS Tunnel Open** | The client initiated a secure HTTPS tunnel via HTTP CONNECT. |
+| **`[CLOSE]`** | **Tunnel Closed** | The connection completed normally. Displays upload bytes (`Up`), download bytes (`Down`), and total duration. |
+| **`[FAILED]`** | **Connection Failed** | Mac could not reach the target host (e.g., target server down, DNS resolution failure, or timeout). |
+| **`[HTTP]`** | **Standard HTTP** | Unencrypted HTTP forwarding request, including response HTTP status code and payload size. |
+| **`[SOCKS5]`** | **SOCKS5 Session** | Client connected via the SOCKS5 proxy port (default: 1080). |
+| **`[PROBE]`** | **Route Verified** | Client successfully verified active proxy routing via the virtual probe domain (`probe.netbridge`). |
+
+> **Note on high connection frequency**: Modern websites and mobile operating systems routinely open 20–50 parallel TCP connections for fonts, scripts, API calls, and telemetry. Seeing frequent `[CONNECT]` and `[CLOSE]` events within seconds is completely normal.
 
 Query live gateway throughput via the JSON status endpoint:
 
