@@ -69,15 +69,26 @@ Connect your Mac directly to a secondary laptop using a **USB-C, Thunderbolt, or
   - Overcoming weak, faulty, or congested Wi-Fi on a secondary laptop (Laptop B).
   - Venues with strict Wi-Fi *Client Isolation* (where devices cannot communicate with each other over Wi-Fi).
   - Maximizing throughput with link speeds up to 40 Gbps, 0 ms added latency, and 0% packet loss.
-- **How to use**:
-  1. Plug a USB-C / Thunderbolt cable between your Mac and Laptop B.
-  2. Turn off Wi-Fi on Laptop B (optional, ensures all traffic uses the cable).
-  3. Run `netbridge serve` on your Mac.
-  4. On Laptop B, run the setup command using the Mac's Thunderbolt bridge IP (e.g., `169.254.x.x`):
-     ```bash
-     curl -fsSL http://<MAC_BRIDGE_IP>:8888/setup.sh | bash
-     ```
-  5. Laptop B is now 100% disconnected from the router, routing entirely through the Mac's fast Wi-Fi connection.
+- **Understanding Cable Networking**:
+  When two computers are connected directly via USB-C or Thunderbolt, they form a dedicated point-to-point network (*Thunderbolt Bridge*). Because Laptop B's Wi-Fi is turned off, it communicates directly with the Mac over the wire without touching the Wi-Fi router.
+- **How to Connect from Laptop B**:
+  1. Plug a USB-C or Thunderbolt cable between your Mac and Laptop B.
+  2. Turn off Wi-Fi on Laptop B (optional, ensures all traffic routes over the wire).
+  3. Start the gateway on your Mac: `netbridge serve`.
+  4. On Laptop B, choose either method:
+     - **Option A (Zero-Config via Bonjour Hostname — Recommended)**:
+       Every Mac automatically broadcasts a local hostname (`<mac-name>.local`) across the cable. No IP lookup is needed! NetBridge prints this exact command on your terminal dashboard:
+       ```bash
+       curl -fsSL http://<YOUR_MAC_NAME>.local:8888/setup.sh | bash
+       ```
+       *(Example: `curl -fsSL http://fvndi.local:8888/setup.sh | bash`)*
+     - **Option B (Via Thunderbolt Bridge IP)**:
+       If you prefer using an IP address, find the Mac's cable interface IP on your Mac via `ifconfig bridge0` (typically `192.168.2.1` or link-local `169.254.x.x`), then run on Laptop B:
+       ```bash
+       curl -fsSL http://<MAC_BRIDGE_IP>:8888/setup.sh | bash
+       ```
+     - **Option C (Native macOS Internet Sharing — Zero Proxy)**:
+       Apple natively supports sharing Wi-Fi to a cable! On your Mac, go to **System Settings > General > Sharing > Internet Sharing**, choose *Share from: Wi-Fi* to *Thunderbolt Bridge*, and toggle it on. Laptop B will instantly get internet over the wire with native NAT routing (no commands or proxy needed on Laptop B).
 
 ---
 
@@ -223,17 +234,19 @@ NetBridge automatically detects your local IP address and displays a status dash
 NetBridge: User-Space Network Sharing Gateway
 ================================================================
 Host Address:     192.168.1.50
+Bonjour / Cable:  my-mac.local
 HTTP/HTTPS Proxy: http://192.168.1.50:8888
 SOCKS5 Proxy:     socks5://192.168.1.50:1080
 PAC Auto-Config:  http://192.168.1.50:8888/proxy.pac
 Mobile Portal:    http://192.168.1.50:8888/connect
 ----------------------------------------------------------------
 Client Quick-Connect:
-  • Mac / Linux:  curl -fsSL http://192.168.1.50:8888/setup.sh | bash
-  • Disconnect:   curl -fsSL http://192.168.1.50:8888/restore.sh | bash
-  • Windows:      Enable 'Use setup script' and paste PAC URL above
-  • Smartphone:   Scan QR code below or set Wi-Fi proxy manually:
-                  Host: 192.168.1.50 | Port: 8888
+  • Wi-Fi Clients: curl -fsSL http://192.168.1.50:8888/setup.sh | bash
+  • USB-C / Cable: curl -fsSL http://my-mac.local:8888/setup.sh | bash
+  • Disconnect:    curl -fsSL http://192.168.1.50:8888/restore.sh | bash
+  • Windows:       Enable 'Use setup script' and paste PAC URL above
+  • Smartphone:    Scan QR code below or set Wi-Fi proxy manually:
+                   Host: 192.168.1.50 | Port: 8888
 ----------------------------------------------------------------
 
 [ ANSI QR CODE PRINTED HERE ]

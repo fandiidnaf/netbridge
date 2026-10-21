@@ -19,12 +19,13 @@ func TestGenerateTerminalQRCode(t *testing.T) {
 func TestRenderDashboard(t *testing.T) {
 	var buf bytes.Buffer
 	info := ServerInfo{
-		Host:      "192.168.1.50",
-		HTTPPort:  8888,
-		SOCKSPort: 1080,
-		PACURL:    "http://192.168.1.50:8888/proxy.pac",
-		PortalURL: "http://192.168.1.50:8888/connect",
-		SetupCmd:  "curl -fsSL http://192.168.1.50:8888/setup.sh | bash",
+		Host:        "192.168.1.50",
+		BonjourHost: "my-mac.local",
+		HTTPPort:    8888,
+		SOCKSPort:   1080,
+		PACURL:      "http://192.168.1.50:8888/proxy.pac",
+		PortalURL:   "http://192.168.1.50:8888/connect",
+		SetupCmd:    "curl -fsSL http://192.168.1.50:8888/setup.sh | bash",
 	}
 
 	RenderDashboard(&buf, info)
@@ -41,6 +42,12 @@ func TestRenderDashboard(t *testing.T) {
 	}
 	if !strings.Contains(output, "http://192.168.1.50:8888/connect") {
 		t.Errorf("expected dashboard to contain portal url")
+	}
+	if !strings.Contains(output, "my-mac.local") {
+		t.Errorf("expected dashboard to contain Bonjour host")
+	}
+	if !strings.Contains(output, "USB-C / Cable: curl -fsSL http://my-mac.local:8888/setup.sh | bash") {
+		t.Errorf("expected dashboard to contain USB-C cable setup command")
 	}
 }
 

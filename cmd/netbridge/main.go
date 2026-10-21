@@ -144,13 +144,23 @@ func runServe(args []string) {
 		if notice := updater.CheckUpdateNotice(version); notice != "" {
 			fmt.Printf("%s\n\n", notice)
 		}
+		var bonjourHost string
+		if h, err := os.Hostname(); err == nil && h != "" {
+			if !strings.HasSuffix(h, ".local") {
+				bonjourHost = h + ".local"
+			} else {
+				bonjourHost = h
+			}
+		}
+
 		info := ui.ServerInfo{
-			Host:      announcedHost,
-			HTTPPort:  *httpPortFlag,
-			SOCKSPort: *socksPortFlag,
-			PACURL:    fmt.Sprintf("http://%s:%d/proxy.pac", announcedHost, *httpPortFlag),
-			PortalURL: fmt.Sprintf("http://%s:%d/connect", announcedHost, *httpPortFlag),
-			SetupCmd:  fmt.Sprintf("curl -fsSL http://%s:%d/setup.sh | bash", announcedHost, *httpPortFlag),
+			Host:        announcedHost,
+			BonjourHost: bonjourHost,
+			HTTPPort:    *httpPortFlag,
+			SOCKSPort:   *socksPortFlag,
+			PACURL:      fmt.Sprintf("http://%s:%d/proxy.pac", announcedHost, *httpPortFlag),
+			PortalURL:   fmt.Sprintf("http://%s:%d/connect", announcedHost, *httpPortFlag),
+			SetupCmd:    fmt.Sprintf("curl -fsSL http://%s:%d/setup.sh | bash", announcedHost, *httpPortFlag),
 		}
 		ui.RenderDashboard(os.Stdout, info)
 	} else {

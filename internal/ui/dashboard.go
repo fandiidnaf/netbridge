@@ -11,12 +11,13 @@ import (
 
 // ServerInfo holds display data for the dashboard.
 type ServerInfo struct {
-	Host      string
-	HTTPPort  int
-	SOCKSPort int
-	PACURL    string
-	PortalURL string
-	SetupCmd  string
+	Host        string
+	BonjourHost string
+	HTTPPort    int
+	SOCKSPort   int
+	PACURL      string
+	PortalURL   string
+	SetupCmd    string
 }
 
 // GenerateTerminalQRCode creates a compact ANSI QR code suitable for terminal screens.
@@ -37,6 +38,9 @@ func RenderDashboard(w io.Writer, info ServerInfo) {
 	b.WriteString("NetBridge: User-Space Network Sharing Gateway\n")
 	b.WriteString("================================================================\n")
 	fmt.Fprintf(&b, "Host Address:     %s\n", info.Host)
+	if info.BonjourHost != "" && info.BonjourHost != info.Host {
+		fmt.Fprintf(&b, "Bonjour / Cable:  %s\n", info.BonjourHost)
+	}
 	fmt.Fprintf(&b, "HTTP/HTTPS Proxy: http://%s:%d\n", info.Host, info.HTTPPort)
 	if info.SOCKSPort > 0 {
 		fmt.Fprintf(&b, "SOCKS5 Proxy:     socks5://%s:%d\n", info.Host, info.SOCKSPort)
@@ -45,9 +49,12 @@ func RenderDashboard(w io.Writer, info ServerInfo) {
 	fmt.Fprintf(&b, "Mobile Portal:    %s\n", info.PortalURL)
 	b.WriteString("----------------------------------------------------------------\n")
 	b.WriteString("Client Quick-Connect:\n")
-	fmt.Fprintf(&b, "  • Mac / Linux:  %s\n", info.SetupCmd)
-	fmt.Fprintf(&b, "  • Disconnect:   curl -fsSL http://%s:%d/restore.sh | bash\n", info.Host, info.HTTPPort)
-	b.WriteString("  • Windows:      Enable 'Use setup script' and paste PAC URL above\n")
+	fmt.Fprintf(&b, "  • Wi-Fi Clients: curl -fsSL http://%s:%d/setup.sh | bash\n", info.Host, info.HTTPPort)
+	if info.BonjourHost != "" {
+		fmt.Fprintf(&b, "  • USB-C / Cable: curl -fsSL http://%s:%d/setup.sh | bash\n", info.BonjourHost, info.HTTPPort)
+	}
+	fmt.Fprintf(&b, "  • Disconnect:    curl -fsSL http://%s:%d/restore.sh | bash\n", info.Host, info.HTTPPort)
+	b.WriteString("  • Windows:       Enable 'Use setup script' and paste PAC URL above\n")
 	fmt.Fprintf(&b, "  • Smartphone:   Scan QR code below or set Wi-Fi proxy manually:\n")
 	fmt.Fprintf(&b, "                  Host: %s | Port: %d\n", info.Host, info.HTTPPort)
 	b.WriteString("----------------------------------------------------------------\n\n")
