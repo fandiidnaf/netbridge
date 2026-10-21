@@ -139,6 +139,75 @@ sudo mv netbridge /usr/local/bin/
 
 ---
 
+## Updating NetBridge
+
+### Built-in Smart Updater (Recommended)
+
+NetBridge includes a built-in update command that checks GitHub for newer releases and provides instructions based on your installation method:
+
+```bash
+netbridge update
+```
+
+### Via Homebrew
+
+If installed through the Homebrew tap:
+
+```bash
+brew update
+brew upgrade netbridge
+```
+
+### Via Go
+
+```bash
+go install github.com/fandiidnaf/netbridge/cmd/netbridge@latest
+```
+
+---
+
+## Uninstallation & Clean Removal
+
+If you decide to uninstall NetBridge, follow these steps to ensure your system network configurations are cleanly restored:
+
+### Step 1: Ensure Proxy Settings Are Disabled
+
+Before removing the binary, verify that your Mac's network interfaces are restored to default (no lingering proxy configurations):
+
+```bash
+netbridge leave
+```
+
+You can confirm that HTTP and SOCKS5 proxies are disabled with:
+
+```bash
+netbridge status
+```
+
+### Step 2: Remove the Application
+
+#### If installed via Homebrew:
+
+```bash
+# 1. Uninstall the formula
+brew uninstall netbridge
+
+# 2. (Optional) Remove the tap repository
+brew untap fandiidnaf/tap
+```
+
+#### If installed manually or via Go:
+
+```bash
+# Locate and delete the binary
+rm -f $(which netbridge)
+
+# (Optional) Clear the local update cache
+rm -rf ~/Library/Caches/netbridge
+```
+
+---
+
 ## Usage
 
 ### 1. Start the Gateway on Host Mac
@@ -269,6 +338,7 @@ Commands:
   join       Configure local machine to use an existing NetBridge gateway
   leave      Disable all local proxy settings on this machine
   status     Inspect the current system proxy status
+  update     Check for updates and show upgrade instructions
   version    Show version and build information
 
 Flags for 'serve':

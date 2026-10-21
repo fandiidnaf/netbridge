@@ -17,6 +17,7 @@ import (
 	"github.com/fandiidnaf/netbridge/internal/network"
 	"github.com/fandiidnaf/netbridge/internal/proxy"
 	"github.com/fandiidnaf/netbridge/internal/ui"
+	"github.com/fandiidnaf/netbridge/internal/updater"
 )
 
 var (
@@ -43,9 +44,17 @@ func main() {
 		runLeave(args)
 	case "status":
 		runStatus(args)
+	case "update":
+		if err := updater.RunUpdate(version); err != nil {
+			fmt.Fprintf(os.Stderr, "Error: %v\n", err)
+			os.Exit(1)
+		}
 	case "version", "-v", "--version":
 		cleanVer := strings.TrimPrefix(version, "v")
 		fmt.Printf("netbridge v%s (commit: %s, built: %s)\n", cleanVer, commit, date)
+		if notice := updater.CheckUpdateNotice(version); notice != "" {
+			fmt.Printf("\n%s\n", notice)
+		}
 	case "help", "-h", "--help":
 		printUsage()
 	default:
@@ -66,6 +75,7 @@ Commands:
   join       Configure local machine to use an existing NetBridge gateway
   leave      Disable all local proxy settings on this machine
   status     Inspect the current system proxy status
+  update     Check for updates and show upgrade instructions
   version    Show version and build information
 
 Run 'netbridge <command> --help' for details on a specific command.`)
@@ -131,6 +141,9 @@ func runServe(args []string) {
 	}
 
 	if !*quietFlag {
+		if notice := updater.CheckUpdateNotice(version); notice != "" {
+			fmt.Printf("%s\n\n", notice)
+		}
 		info := ui.ServerInfo{
 			Host:      announcedHost,
 			HTTPPort:  *httpPortFlag,
