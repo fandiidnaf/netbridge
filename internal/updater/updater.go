@@ -108,7 +108,7 @@ func CheckUpdateNotice(currentVersion string) string {
 
 	if cache.LatestVersion != "" && IsNewer(cache.LatestVersion, cleanCurrent) {
 		if IsHomebrewInstall() {
-			return fmt.Sprintf("Notice: A newer version of NetBridge is available (v%s -> v%s). Run 'brew upgrade netbridge' to update.", cleanCurrent, cache.LatestVersion)
+			return fmt.Sprintf("Notice: A newer version of NetBridge is available (v%s -> v%s). Run 'brew upgrade fandiidnaf/tap/netbridge' to update.", cleanCurrent, cache.LatestVersion)
 		}
 		return fmt.Sprintf("Notice: A newer version of NetBridge is available (v%s -> v%s). Run 'netbridge update' to update.", cleanCurrent, cache.LatestVersion)
 	}
@@ -140,12 +140,12 @@ func RunUpdate(currentVersion string) error {
 	if IsHomebrewInstall() {
 		fmt.Println("NetBridge is installed via Homebrew.")
 		fmt.Println("To upgrade, execute:")
-		fmt.Println("  brew update && brew upgrade netbridge")
+		fmt.Println("  brew upgrade fandiidnaf/tap/netbridge")
 		return nil
 	}
 
 	fmt.Println("To upgrade your installation:")
-	fmt.Printf("  • Homebrew:  brew upgrade netbridge\n")
+	fmt.Printf("  • Homebrew:  brew upgrade fandiidnaf/tap/netbridge\n")
 	fmt.Printf("  • Go:        go install github.com/%s/%s/cmd/netbridge@v%s\n", repoOwner, repoName, latestClean)
 	fmt.Printf("  • Releases:  %s\n", info.HTMLURL)
 	return nil

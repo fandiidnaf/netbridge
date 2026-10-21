@@ -118,9 +118,10 @@ Quickly test web applications across mobile browsers without complex DNS reconfi
 
 ### Via Homebrew (Recommended)
 
+Install in a single command (Homebrew will automatically tap the repository):
+
 ```bash
-brew tap fandiidnaf/tap
-brew install netbridge
+brew install fandiidnaf/tap/netbridge
 ```
 
 ### Via Go Install
@@ -155,8 +156,7 @@ netbridge update
 If installed through the Homebrew tap:
 
 ```bash
-brew update
-brew upgrade netbridge
+brew upgrade fandiidnaf/tap/netbridge
 ```
 
 ### Via Go
@@ -191,7 +191,7 @@ netbridge status
 
 ```bash
 # 1. Uninstall the formula
-brew uninstall netbridge
+brew uninstall fandiidnaf/tap/netbridge
 
 # 2. (Optional) Remove the tap repository
 brew untap fandiidnaf/tap
