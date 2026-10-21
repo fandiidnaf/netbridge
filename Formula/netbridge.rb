@@ -4,24 +4,24 @@
 class Netbridge < Formula
   desc 'User-space network sharing gateway for macOS'
   homepage 'https://github.com/fandiidnaf/netbridge'
-  version '1.0.3'
+  version '1.0.4'
   license 'MIT'
 
   if OS.mac?
     if Hardware::CPU.arm?
       url "https://github.com/fandiidnaf/netbridge/releases/download/v#{version}/netbridge-v#{version}-darwin-arm64.tar.gz"
-      sha256 'b62dc38b03bd2b0bae255f730950c04b7494aca1596de0fe0e0a0ec82fe5e0b7'
+      sha256 '5e459477d8a2b3827fd5e2122d64fc1192f7fbd1209213259690a12cd8dd07b3'
     else
       url "https://github.com/fandiidnaf/netbridge/releases/download/v#{version}/netbridge-v#{version}-darwin-amd64.tar.gz"
-      sha256 '58a1feb3646eccad0cf3eaa88bae734dc40d3987fcd6914ec70c411b09895be3'
+      sha256 'd2e00334e9b4f50df7ec9e98e8c29cce4d4661db1ddf11af947c0cd02b363e52'
     end
   elsif OS.linux?
     if Hardware::CPU.arm?
       url "https://github.com/fandiidnaf/netbridge/releases/download/v#{version}/netbridge-v#{version}-linux-arm64.tar.gz"
-      sha256 'b2e1c9ec2b14a16b7f23df4e7d40742f52d4ca8e1e8b43363181fa00209e5263'
+      sha256 '3ef4cfbd5246fc50cafa53086608a7186bd361e74d12b5214bc893d7d9b56ecc'
     else
       url "https://github.com/fandiidnaf/netbridge/releases/download/v#{version}/netbridge-v#{version}-linux-amd64.tar.gz"
-      sha256 'f87e8fd7384feb23681dc0d275f5d7e4a79ed3234e4c7521674748bc580a2405'
+      sha256 '8cd1cd552f711305d24b9a24b5f2407871e7cf33cb5578f5e4c6c8c70d39da9f'
     end
   end
 
