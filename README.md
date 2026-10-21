@@ -27,29 +27,30 @@ Here is how NetBridge handles traffic across network layers:
                   | 1. Sends internal LAN tunnel request to Mac (Port 8888)
                   v
        +--------------------+
-       |  Local Wi-Fi / LAN |  <-- Router acts ONLY as a local switch.
+       |  Local Wi-Fi / LAN |  <-- Router acts ONLY as a Layer-2 local switch.
        +--------------------+      It does NOT see what websites the client opens.
                   |
                   v
        [ Host Mac (NetBridge) ]
                   |
-                  | 2. Mac creates an outbound connection in its own name
+                  | 2. Mac opens outbound connections on behalf of the client
                   v
        +--------------------+
-       |  Router / Gateway  |  <-- Router sees ONLY the Mac accessing the Internet.
+       |  Router NAT / VPN  |  <-- Router sees ONLY the Mac creating WAN sessions.
        +--------------------+
                   |
                   v
-        [ Upstream Internet ]  <-- Websites see ONLY the Mac's IP address.
+        [ Upstream Internet ]  <-- Websites see the Public IP (Router NAT or Mac's VPN).
 ```
 
 ### 1. In the Eyes of the Local Router
-- **Normal browsing (without NetBridge)**: The router inspects every packet, monitors domains via DNS, and enforces per-device captive portal logins or bandwidth limits against the client's MAC address.
-- **With NetBridge**: The client sends its packets **only to the Mac's local IP address**. The router functions merely as a Layer-2 switch forwarding packets within the local subnet. It never sees external web requests from the client.
+- **Normal browsing (without NetBridge)**: The router inspects every packet, monitors domains via DNS, and enforces per-device captive portal logins or bandwidth limits against each client's private IP and MAC address.
+- **With NetBridge**: The client sends its packets **only to the Mac's local IP address**. The router functions merely as a Layer-2 switch forwarding packets within the local subnet. When traffic exits to the internet, the router's NAT table only records connections initiated by the host Mac.
 
 ### 2. In the Eyes of Upstream Websites
-- When the Mac receives a tunnel request, it initiates a fresh outbound TCP connection to the destination server (e.g., Google, GitHub, or Netflix).
-- External web servers only see the Mac's IP address (or the Mac's active VPN tunnel exit).
+Upstream web servers (e.g., Google, GitHub) communicate via **Public IP addresses**:
+- **On standard Wi-Fi**: External servers see the **Router's Public WAN IP**, with all client requests multiplexed under the Mac's authenticated NAT connection.
+- **When Mac is connected to a VPN**: If your Mac runs a VPN or secure tunnel (Tailscale, WireGuard, WARP, or corporate VPN), client traffic routes through that tunnel, and external websites see the **Mac's VPN Exit Public IP** instead of the local router's IP.
 
 ---
 
