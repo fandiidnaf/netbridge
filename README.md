@@ -118,8 +118,6 @@ Quickly test web applications across mobile browsers without complex DNS reconfi
 
 ### Via Homebrew (Recommended)
 
-Install in a single command (Homebrew will automatically tap the repository):
-
 ```bash
 brew install fandiidnaf/tap/netbridge
 ```
