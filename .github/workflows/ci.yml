@@ -13,7 +13,7 @@ jobs:
     strategy:
       matrix:
         os: [ macos-latest, ubuntu-latest ]
-        go-version: [ '1.22', '1.23' ]
+        go-version: [ '1.24', 'stable' ]
 
     steps:
       - name: Checkout repository
