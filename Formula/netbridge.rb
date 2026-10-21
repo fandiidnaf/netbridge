@@ -4,14 +4,37 @@
 class Netbridge < Formula
   desc 'User-space network sharing gateway for macOS'
   homepage 'https://github.com/fandiidnaf/netbridge'
-  url 'https://github.com/fandiidnaf/netbridge/archive/refs/tags/v1.0.0.tar.gz'
-  sha256 '53b1d9a2d2e6479121e1cd9b6f6b00c9b08837457fd3f0480780e435f67b3e1a'
+  version '1.0.0'
   license 'MIT'
 
-  depends_on 'go' => :build
+  if OS.mac?
+    if Hardware::CPU.arm?
+      url "https://github.com/fandiidnaf/netbridge/releases/download/v#{version}/netbridge-v#{version}-darwin-arm64.tar.gz"
+      sha256 'f1edd3a381524ddb40eb0896381744475bfc0b4ed7983b4d4ba4bc4f13ec85fc'
+    else
+      url "https://github.com/fandiidnaf/netbridge/releases/download/v#{version}/netbridge-v#{version}-darwin-amd64.tar.gz"
+      sha256 'f09a2f096b36f5b4ce611ecb9563de6f67bf8b705b40d58d70fd755ed7db8e07'
+    end
+  elsif OS.linux?
+    if Hardware::CPU.arm?
+      url "https://github.com/fandiidnaf/netbridge/releases/download/v#{version}/netbridge-v#{version}-linux-arm64.tar.gz"
+      sha256 '90aa0f9ce629a72ee6c6d2f1125abf0124535ba859a90fab2b0a808336a57b12'
+    else
+      url "https://github.com/fandiidnaf/netbridge/releases/download/v#{version}/netbridge-v#{version}-linux-amd64.tar.gz"
+      sha256 '845840c839b909f554780bebbd57c4a1d2aea73e604c0010c144d64f4b3bc39e'
+    end
+  end
 
   def install
-    system 'go', 'build', *std_go_args(ldflags: "-s -w -X main.version=#{version}"), './cmd/netbridge'
+    binary_name = if OS.mac?
+                    Hardware::CPU.arm? ? 'netbridge-darwin-arm64' : 'netbridge-darwin-amd64'
+                  elsif Hardware::CPU.arm?
+                    'netbridge-linux-arm64'
+                  else
+                    'netbridge-linux-amd64'
+                  end
+
+    bin.install binary_name => 'netbridge'
   end
 
   test do
