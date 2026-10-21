@@ -132,6 +132,8 @@ func (s *SOCKSServer) handleConnection(clientConn net.Conn) {
 	start := time.Now()
 
 	// 4. Bi-directional data transfer
+	optimizeTCPConn(clientConn)
+	optimizeTCPConn(targetConn)
 	s.tunnel(clientConn, targetConn)
 	duration := time.Since(start).Round(time.Millisecond)
 	log.Printf("[SOCKS5_CLOSE] %s <- %s (Duration: %s)", clientIP, targetAddr, duration)
@@ -231,8 +233,10 @@ func (s *SOCKSServer) tunnel(c1, c2 net.Conn) {
 
 	pipe := func(dst, src net.Conn, isUpload bool) {
 		defer wg.Done()
-		buf := make([]byte, 32*1024)
-		n, _ := io.CopyBuffer(dst, src, buf)
+		bufPtr := bufferPool.Get().(*[]byte)
+		defer bufferPool.Put(bufPtr)
+
+		n, _ := io.CopyBuffer(dst, src, *bufPtr)
 		if isUpload {
 			s.metrics.AddBytes(uint64(n), 0)
 		} else {

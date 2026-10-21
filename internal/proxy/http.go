@@ -15,6 +15,25 @@ import (
 	"time"
 )
 
+const tunnelBufferSize = 128 * 1024
+
+var bufferPool = sync.Pool{
+	New: func() any {
+		b := make([]byte, tunnelBufferSize)
+		return &b
+	},
+}
+
+// optimizeTCPConn sets TCP_NODELAY and socket buffer sizes for high-throughput streaming.
+func optimizeTCPConn(c net.Conn) {
+	if tc, ok := c.(*net.TCPConn); ok {
+		_ = tc.SetNoDelay(true)
+		_ = tc.SetKeepAlive(true)
+		_ = tc.SetReadBuffer(tunnelBufferSize)
+		_ = tc.SetWriteBuffer(tunnelBufferSize)
+	}
+}
+
 // ServerConfig defines initialization parameters for the HTTP proxy server.
 type ServerConfig struct {
 	Host      string
@@ -164,6 +183,9 @@ func (s *HTTPServer) handleConnect(w http.ResponseWriter, r *http.Request, clien
 	}
 	defer clientConn.Close()
 
+	optimizeTCPConn(targetConn)
+	optimizeTCPConn(clientConn)
+
 	_, err = clientConn.Write([]byte("HTTP/1.1 200 Connection Established\r\n\r\n"))
 	if err != nil {
 		return
@@ -212,8 +234,10 @@ func (s *HTTPServer) tunnel(c1, c2 net.Conn) (uint64, uint64) {
 
 	pipe := func(dst, src net.Conn, isUpload bool) {
 		defer wg.Done()
-		buf := make([]byte, 32*1024)
-		n, _ := io.CopyBuffer(dst, src, buf)
+		bufPtr := bufferPool.Get().(*[]byte)
+		defer bufferPool.Put(bufPtr)
+
+		n, _ := io.CopyBuffer(dst, src, *bufPtr)
 		if isUpload {
 			atomic.AddUint64(&upBytes, uint64(n))
 			s.metrics.AddBytes(uint64(n), 0)

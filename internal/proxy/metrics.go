@@ -48,11 +48,10 @@ func (m *Metrics) ReleaseConnection() {
 	atomic.AddInt64(&m.ActiveConns, -1)
 }
 
-// AddBytes adds transferred byte counts and recalculates instantaneous speed.
+// AddBytes atomically adds transferred byte counts without acquiring locks.
 func (m *Metrics) AddBytes(in, out uint64) {
 	atomic.AddUint64(&m.BytesIn, in)
 	atomic.AddUint64(&m.BytesOut, out)
-	m.calculateSpeed()
 }
 
 // ActiveClientCount returns the number of distinct clients seen within the active duration.
