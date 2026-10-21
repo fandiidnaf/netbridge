@@ -10,6 +10,7 @@ import (
 	"os/signal"
 	"runtime"
 	"strconv"
+	"strings"
 	"syscall"
 	"time"
 
@@ -43,7 +44,8 @@ func main() {
 	case "status":
 		runStatus(args)
 	case "version", "-v", "--version":
-		fmt.Printf("netbridge v%s (commit: %s, built: %s)\n", version, commit, date)
+		cleanVer := strings.TrimPrefix(version, "v")
+		fmt.Printf("netbridge v%s (commit: %s, built: %s)\n", cleanVer, commit, date)
 	case "help", "-h", "--help":
 		printUsage()
 	default:
